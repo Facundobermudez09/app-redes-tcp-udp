@@ -43,7 +43,7 @@ Trabajo práctico de **Redes**: dos aplicaciones cliente/servidor en Python, una
 **Opción con Git:**
 
 ```
-git clone https://github.com/facubermu7/tp-redes-ejercicio7.git
+git clone https://github.com/Facundobermudez09/app-redes-tcp-udp.git
 ```
 
 Los 5 archivos `.py` tienen que estar **en la misma carpeta**, porque todos usan `comun.py`.
