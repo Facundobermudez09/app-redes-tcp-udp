@@ -9,6 +9,8 @@ Packet Tracer **no puede ejecutar** el módulo `socket` estándar de Python: su 
 
 Guardá el archivo como `ejercicio7_tcp_udp.pkt`.
 
+Esta guía sirve para **Packet Tracer 5.3.3** y para versiones más nuevas (6.x, 7.x, 8.x). Las diferencias están marcadas donde corresponde.
+
 ---
 
 ## 1. Topología
@@ -113,7 +115,10 @@ Anotá en el informe lo que muestra PT en cada caso. Algunas versiones de Packet
 
 ## 7. Extensión opcional: dos redes con un router
 
-Si el profe pide algo más completo, agregá un **Router 1941** entre dos switches:
+Si el profe pide algo más completo, agregá un **Router 1941** entre dos switches.
+
+> **En Packet Tracer 5.3.3 no existe el 1941:** usá un **Router 1841** (o 2811). Sus interfaces se llaman **Fa0/0** y **Fa0/1**, así que en la tabla y en los comandos reemplazá `G0/0` por `Fa0/0` y `G0/1` por `Fa0/1`.
+
 
 | Dispositivo | Interfaz | IP | Máscara |
 |---|---|---|---|
@@ -151,4 +156,7 @@ Cuando el archivo esté armado, guardalo como `ejercicio7_tcp_udp.pkt` y subilo 
   git push
   ```
 
-Tus compañeros lo abren con Cisco Packet Tracer (*File → Open*). Conviene que todos usen la misma versión de PT o una más nueva: un `.pkt` guardado en una versión nueva puede no abrir en una más vieja.
+Tus compañeros lo abren con Cisco Packet Tracer (*File → Open*). Sobre las versiones:
+
+- Un `.pkt` guardado en **5.3.3** se abre sin problemas en versiones más nuevas (7.x, 8.x).
+- Al revés **no funciona**: si alguien lo abre y lo **guarda** en una versión nueva, ya no se podrá abrir en 5.3.3. Si van a editarlo entre varios, conviene que todos usen la misma versión.
