@@ -31,6 +31,7 @@ Trabajo práctico de **Redes**: dos aplicaciones cliente/servidor en Python, una
 | `servidor_tcp.py` / `cliente_tcp.py` | Versión **TCP** |
 | `servidor_udp.py` / `cliente_udp.py` | Versión **UDP** |
 | [`respuestas.md`](respuestas.md) | Respuestas a las preguntas teóricas a–g |
+| [`explicacion_codigo.md`](explicacion_codigo.md) | Explicación del código línea por línea |
 | [`guia_packet_tracer.md`](guia_packet_tracer.md) | Cómo armar y demostrar la red en Cisco Packet Tracer |
 | `ejercicio7_tcp_udp.pkt` | Archivo de Packet Tracer (se agrega cuando esté armado) |
 
@@ -232,4 +233,5 @@ En el paso 5, en una sola computadora suele aparecer *"no hay ningún servidor e
 ## 9. Más material
 
 - [`respuestas.md`](respuestas.md): preguntas teóricas a–g.
+- [`explicacion_codigo.md`](explicacion_codigo.md): explicación del código línea por línea y preguntas que nos pueden hacer.
 - [`guia_packet_tracer.md`](guia_packet_tracer.md): topología, direccionamiento y demostración en modo Simulación.
