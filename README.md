@@ -198,6 +198,7 @@ Como UDP no tiene conexión, el servidor **no sabe** "quién está conectado". P
 | `comun.py` | `formato_frase(texto)` | Separa en palabras y pone en mayúscula la primera letra de cada una (no usa `str.title()`, que convertiría "don't" en "Don'T") |
 | `servidor_tcp.py` | `main()` | `bind` → `listen` → bucle de `accept`, un cliente a la vez |
 | `servidor_tcp.py` | `atender_cliente()` | Verifica la clave; si es correcta, repite `recv` → `formato_frase` → `sendall` |
+| `servidor_tcp.py` | `recibir()` | Un `recv()` que se "despierta" cada 1 s para que `Ctrl+C` funcione en Windows |
 | `cliente_tcp.py` | `main()` | `connect`; si el servidor no está, captura `ConnectionRefusedError` |
 | `servidor_udp.py` | `main()` | `bind` → bucle de `recvfrom`; usa el `set` `autenticados` para la clave |
 | `cliente_udp.py` | `enviar_y_esperar()` | `sendto` + `recvfrom` con **timeout de 3 s**; si no hay respuesta, avisa que el servidor no está disponible |
@@ -212,10 +213,11 @@ Los textos viajan como bytes en **UTF-8** (`.encode()` / `.decode()`), así func
 |---|---|---|
 | 1 | Ejecutar `servidor_tcp.py` y `cliente_tcp.py`, clave correcta y un texto | Funcionamiento general; preguntas **a** y **c** (handshake, `bind`/`listen`/`accept`) |
 | 2 | Cliente TCP con clave incorrecta | El servidor no ejecuta el programa |
-| 3 | Lo mismo con `servidor_udp.py` / `cliente_udp.py` | Preguntas **b** y **d** (`connect` vs `sendto`, `recv` vs `recvfrom`) |
+| 3 | Lo mismo con `servidor_udp.py` / `cliente_udp.py` | Preguntas **b**, **d** y **h** (`connect` vs `sendto`, `recv` vs `recvfrom`, orientado a conexión) |
 | 4 | Cerrar el servidor TCP (`Ctrl+C`) y ejecutar el cliente TCP | Pregunta **e**: rechazo inmediato |
 | 5 | Cerrar el servidor UDP y ejecutar el cliente UDP | Pregunta **f**: la clave "se envía" igual; luego error o timeout |
 | 6 | Mostrar la simulación en Packet Tracer | Handshake TCP vs UDP sin conexión; pregunta **g** |
+| 7 | Mencionar qué mostraría Wireshark (la clave en texto plano) | Pregunta **i** |
 
 En el paso 5, en una sola computadora suele aparecer *"no hay ningún servidor en ese puerto (ICMP port unreachable)"*. Entre dos computadoras suele aparecer *"Sin respuesta después de 3 s"*, porque el firewall descarta el paquete sin avisar. Las dos cosas son correctas y sirven para explicar la pregunta f.
 
@@ -226,6 +228,7 @@ En el paso 5, en una sola computadora suele aparecer *"no hay ningún servidor e
 | `'python' no se reconoce como un comando...` | Probá con `py` o `python3`. Si ninguno anda, reinstalá Python marcando **"Add python.exe to PATH"** |
 | `ModuleNotFoundError: No module named 'comun'` | La terminal no está en la carpeta del proyecto, o falta `comun.py` |
 | `OSError: [WinError 10048]` / `Address already in use` | Ya hay un servidor ejecutándose en otra terminal: cerralo con `Ctrl+C` |
+| `Ctrl+C` no cierra el servidor | Tenés una versión vieja del código: cerrá la terminal con la X y bajá de nuevo el repositorio |
 | `No se pudo conectar ... (conexión rechazada)` | El servidor no está ejecutándose, o la IP está mal escrita |
 | Desde otra compu se queda esperando y da timeout | Firewall de la notebook servidor, IP equivocada o red que aísla equipos: usá el **plan B** |
 | `Sin respuesta después de 3 s` en UDP | Lo mismo que el anterior; también pasa si el servidor UDP no está ejecutándose |

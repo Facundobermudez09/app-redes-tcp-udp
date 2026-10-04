@@ -28,6 +28,7 @@
   - abajo a la izquierda: servidor UDP;
   - abajo a la derecha: cliente UDP.
 - [ ] Probar que `py --version` funcione en la compu que se va a usar.
+- [ ] Tener la **última versión** del repositorio (volver a bajar el ZIP si lo descargaron antes del 4/10).
 - [ ] **No** dejar servidores abiertos de antes. Si aparece `WinError 10048`, hay uno abierto: cerrarlo con `Ctrl+C`.
 - [ ] Abrir `ejercicio7_tcp_udp.pkt` en Packet Tracer y dejarlo en modo **Realtime**.
 - [ ] Hacer un `ping` desde la PC al servidor en Packet Tracer, para que ARP ya esté resuelto y la simulación sea más limpia.
@@ -113,7 +114,9 @@
 🖱️ Terminal del servidor UDP: `py servidor_udp.py`. Terminal del cliente UDP: `py cliente_udp.py`, clave correcta, un texto, `salir`.
 
 🗣️
-> "En UDP, desde afuera funciona igual: clave, texto, respuesta. Pero por dentro no hubo ningún handshake: el primer datagrama que salió ya fue la clave."
+> "En UDP, desde afuera funciona igual: clave, texto, respuesta. Pero por dentro no hubo ningún handshake: el primer datagrama que salió ya fue la clave.
+>
+> Esto es lo que significa que TCP sea **orientado a conexión** y UDP no: TCP primero establece una conexión y los dos extremos mantienen un estado —números de secuencia, qué se confirmó— hasta cerrarla con FIN. UDP no establece nada ni guarda estado: cada datagrama es independiente. Por eso nuestro servidor UDP tiene que recordar a mano quién puso la clave. Esto responde la **pregunta h**."
 
 🖱️ `Ctrl+C` en el servidor UDP. Ejecutar `py cliente_udp.py` y poner la clave.
 
@@ -156,6 +159,9 @@
 🗣️
 > "En cambio, el datagrama UDP solo tiene puertos, longitud y checksum. **No tiene secuencia, ni ACK, ni ventana**: por eso UDP no puede garantizar la entrega ni el orden."
 
+🗣️ (**pregunta i**)
+> "Esto en Packet Tracer es una simulación. Con **Wireshark** se puede capturar el tráfico real de nuestro programa —filtrando por `tcp.port == 5000` o `udp.port == 5001`— y ahí se ve además: las direcciones MAC e IP, el puerto efímero del cliente, el handshake, los números de secuencia y ACK, las retransmisiones y el ICMP cuando el servidor UDP está apagado. Y algo importante: **se lee la clave en texto plano**, lo que demuestra que nuestra autenticación no es segura sin cifrado."
+
 🖱️ Opcional: en el servidor, **Services → HTTP → Off** y repetir. Después **DNS → Off** y repetir.
 
 🗣️ (opcional)
@@ -177,6 +183,7 @@
 | Problema | Qué hacer |
 |---|---|
 | `WinError 10048` al abrir un servidor | Ya hay otro abierto: cerrar todas las terminales y volver a abrir |
+| `Ctrl+C` no cierra el servidor | Es la versión vieja del código: cerrar la terminal con la X y bajar la última versión del repo |
 | `'py' no se reconoce` | Probar con `python`; si no, usar la notebook de otro integrante |
 | La demo entre dos PCs no conecta | Hacerla en una sola PC con `127.0.0.1`: se explica igual |
 | Packet Tracer no muestra el handshake | Hacer **Reset Simulation**, revisar los filtros (TCP activado) y repetir |
@@ -194,6 +201,7 @@ Las respuestas están en [`explicacion_codigo.md`](explicacion_codigo.md) (secci
 - ¿Qué pasa si se conectan dos clientes TCP a la vez? ¿Y en UDP?
 - ¿La clave viaja segura?
 - ¿Por qué el cliente UDP necesita timeout y el TCP no?
+- ¿Para qué está el `settimeout(1)` en los servidores? (para que `Ctrl+C` funcione en Windows; no tiene que ver con TCP/UDP)
 - ¿Qué hace el router con los segmentos TCP? ¿Mira los puertos?
 - **h.** ¿Por qué TCP es orientado a conexión y UDP no?
 - **i.** ¿Qué más se puede ver en una captura de Wireshark? (Tip: la clave viaja en texto plano y se puede leer en la captura)
