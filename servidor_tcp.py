@@ -7,11 +7,23 @@ import socket
 from comun import (CLAVE, CMD_SALIR, CODIFICACION, HOST_ESCUCHA, PUERTO_TCP,
                    RESP_ERROR, RESP_OK, TAM_BUFFER, formato_frase)
 
+# Cada cuántos segundos "despiertan" accept()/recv() para poder atender Ctrl+C
+INTERVALO = 1
+
+
+def recibir(conexion):
+    """recv() que se puede interrumpir con Ctrl+C en Windows."""
+    while True:
+        try:
+            return conexion.recv(TAM_BUFFER)
+        except socket.timeout:
+            continue  # no llegó nada en 1 s: se vuelve a esperar
+
 
 def atender_cliente(conexion, direccion):
     """Atiende a un cliente ya conectado (la conexión TCP ya está establecida)."""
     # 1) Primer mensaje: la clave
-    clave = conexion.recv(TAM_BUFFER).decode(CODIFICACION).strip()
+    clave = recibir(conexion).decode(CODIFICACION).strip()
     if clave != CLAVE:
         print(f"[TCP] {direccion} -> clave incorrecta. Se cierra la conexión.")
         conexion.sendall(RESP_ERROR.encode(CODIFICACION))
@@ -22,7 +34,7 @@ def atender_cliente(conexion, direccion):
 
     # 2) Bucle de trabajo: recibir texto, convertirlo y devolverlo
     while True:
-        datos = conexion.recv(TAM_BUFFER)
+        datos = recibir(conexion)
         if not datos:  # recv() devuelve b"" cuando el cliente cerró la conexión
             print(f"[TCP] {direccion} cerró la conexión.")
             break
@@ -44,13 +56,18 @@ def main():
 
     servidor.bind((HOST_ESCUCHA, PUERTO_TCP))  # asocia el socket a IP:puerto
     servidor.listen(5)                         # lo pone en modo escucha (cola de 5)
+    servidor.settimeout(INTERVALO)             # para que Ctrl+C funcione en Windows
     print(f"[TCP] Servidor escuchando en el puerto {PUERTO_TCP}... (Ctrl+C para terminar)")
 
     try:
         while True:
             # accept() bloquea hasta que termina el handshake de un cliente y
             # devuelve un socket NUEVO dedicado a esa conexión
-            conexion, direccion = servidor.accept()
+            try:
+                conexion, direccion = servidor.accept()
+            except socket.timeout:
+                continue  # ningún cliente en 1 s: se vuelve a esperar
+            conexion.settimeout(INTERVALO)
             print(f"[TCP] Conexión aceptada desde {direccion}")
             with conexion:
                 try:

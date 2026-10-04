@@ -10,11 +10,15 @@ import socket
 from comun import (CLAVE, CMD_SALIR, CODIFICACION, HOST_ESCUCHA, PUERTO_UDP,
                    RESP_ERROR, RESP_OK, TAM_BUFFER, formato_frase)
 
+# Cada cuántos segundos "despierta" recvfrom() para poder atender Ctrl+C
+INTERVALO = 1
+
 
 def main():
     # SOCK_DGRAM = UDP
     servidor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     servidor.bind((HOST_ESCUCHA, PUERTO_UDP))  # en UDP no hay listen() ni accept()
+    servidor.settimeout(INTERVALO)             # para que Ctrl+C funcione en Windows
     print(f"[UDP] Servidor escuchando en el puerto {PUERTO_UDP}... (Ctrl+C para terminar)")
 
     autenticados = set()  # direcciones (ip, puerto) que ya enviaron la clave
@@ -24,6 +28,8 @@ def main():
             try:
                 # recvfrom() devuelve los datos Y la dirección de quien los envió
                 datos, direccion = servidor.recvfrom(TAM_BUFFER)
+            except socket.timeout:
+                continue  # no llegó nada en 1 s: se vuelve a esperar
             except ConnectionResetError:
                 # En Windows, un ICMP "port unreachable" de un cliente que ya
                 # cerró aparece aquí como error. Se ignora y se sigue.

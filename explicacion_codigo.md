@@ -113,136 +113,173 @@ Contiene lo que comparten los 4 programas. Si se quiere cambiar la clave o un pu
 - **L5**: importa el módulo `socket`, la **API de sockets** de Python.
 - **L7–8**: trae de `comun.py` las constantes y la función que usa este archivo.
 
-### Función `atender_cliente` (L11–37): qué hace el servidor con UN cliente
+```python
+10 # Cada cuántos segundos "despiertan" accept()/recv() para poder atender Ctrl+C
+11 INTERVALO = 1
+```
+- **L11**: tiempo máximo, en segundos, que el servidor se queda "dormido" esperando. Se explica en L59.
+
+### Función `recibir` (L14–20): un `recv()` que se puede cortar con Ctrl+C
 
 ```python
-11 def atender_cliente(conexion, direccion):
+14 def recibir(conexion):
+15     """recv() que se puede interrumpir con Ctrl+C en Windows."""
+16     while True:
+17         try:
+18             return conexion.recv(TAM_BUFFER)
+19         except socket.timeout:
+20             continue  # no llegó nada en 1 s: se vuelve a esperar
 ```
-- **L11**: recibe dos parámetros:
+- **L18**: `recv()` espera datos del cliente, pero como el socket tiene un timeout de 1 s (L70), **no espera más de 1 segundo**.
+  - Si llegan datos, los devuelve.
+  - Si no llega nada, lanza `socket.timeout`.
+- **L19–20**: si fue timeout, no pasó nada malo: `continue` vuelve a llamar a `recv()`.
+- **¿Para qué tanta vuelta?**
+  - En Windows, mientras un programa está bloqueado esperando en `recv()` o `accept()`, **no se entera del `Ctrl+C`** hasta que llega algún dato.
+  - Al "despertarse" cada segundo, Python tiene la oportunidad de atender el `Ctrl+C`.
+  - Para quien lo usa, el comportamiento es igual a un `recv()` normal.
+
+### Función `atender_cliente` (L23–49): qué hace el servidor con UN cliente
+
+```python
+23 def atender_cliente(conexion, direccion):
+```
+- **L23**: recibe dos parámetros:
   - `conexion`: el socket **exclusivo** de ese cliente, que devolvió `accept()`;
   - `direccion`: la tupla `(ip, puerto)` del cliente.
 
 ```python
-14     clave = conexion.recv(TAM_BUFFER).decode(CODIFICACION).strip()
+26     clave = recibir(conexion).decode(CODIFICACION).strip()
 ```
-- **L14**: lee el **primer mensaje**, que por protocolo es la clave. Se hacen tres cosas encadenadas:
-  1. `recv(1024)`: espera y recibe hasta 1024 bytes.
+- **L26**: lee el **primer mensaje**, que por protocolo es la clave. Se hacen tres cosas encadenadas:
+  1. `recibir()`: espera y recibe hasta 1024 bytes (es el `recv()` de L14).
   2. `.decode("utf-8")`: convierte los bytes en texto.
   3. `.strip()`: quita espacios y saltos de línea en los extremos.
 
 ```python
-15     if clave != CLAVE:
-16         print(f"[TCP] {direccion} -> clave incorrecta. Se cierra la conexión.")
-17         conexion.sendall(RESP_ERROR.encode(CODIFICACION))
-18         return  # no se ejecuta el programa
+27     if clave != CLAVE:
+28         print(f"[TCP] {direccion} -> clave incorrecta. Se cierra la conexión.")
+29         conexion.sendall(RESP_ERROR.encode(CODIFICACION))
+30         return  # no se ejecuta el programa
 ```
-- **L15**: compara la clave recibida con la correcta.
-- **L16**: muestra en la consola del servidor qué pasó. La `f` antes de las comillas permite meter variables entre `{}`.
-- **L17**: le avisa al cliente con `ERROR`. Se usa `sendall()` y no `send()` porque `sendall()` garantiza que se manden **todos** los bytes.
-- **L18**: `return` sale de la función **sin procesar ningún texto**. Esto cumple la consigna: "si no coincide, no debe ejecutar el programa". Después, el `with` de `main()` cierra la conexión.
+- **L27**: compara la clave recibida con la correcta.
+- **L28**: muestra en la consola del servidor qué pasó. La `f` antes de las comillas permite meter variables entre `{}`.
+- **L29**: le avisa al cliente con `ERROR`. Se usa `sendall()` y no `send()` porque `sendall()` garantiza que se manden **todos** los bytes.
+- **L30**: `return` sale de la función **sin procesar ningún texto**. Esto cumple la consigna: "si no coincide, no debe ejecutar el programa". Después, el `with` de `main()` cierra la conexión.
 
 ```python
-20     print(f"[TCP] {direccion} -> clave correcta.")
-21     conexion.sendall(RESP_OK.encode(CODIFICACION))
+32     print(f"[TCP] {direccion} -> clave correcta.")
+33     conexion.sendall(RESP_OK.encode(CODIFICACION))
 ```
-- **L20–21**: la clave es correcta, así que lo registra y responde `OK`.
+- **L32–33**: la clave es correcta, así que lo registra y responde `OK`.
 
 ```python
-24     while True:
-25         datos = conexion.recv(TAM_BUFFER)
-26         if not datos:  # recv() devuelve b"" cuando el cliente cerró la conexión
-27             print(f"[TCP] {direccion} cerró la conexión.")
-28             break
+36     while True:
+37         datos = recibir(conexion)
+38         if not datos:  # recv() devuelve b"" cuando el cliente cerró la conexión
+39             print(f"[TCP] {direccion} cerró la conexión.")
+40             break
 ```
-- **L24**: bucle infinito: el servidor sigue atendiendo textos hasta que algo lo corte.
-- **L25**: espera el siguiente mensaje del cliente.
-- **L26–28**: si `recv()` devuelve **bytes vacíos** (`b""`), el cliente cerró la conexión TCP (envió FIN). Entonces se sale del bucle con `break`. Esto es propio de TCP: en UDP no existe "el otro cerró".
+- **L36**: bucle infinito: el servidor sigue atendiendo textos hasta que algo lo corte.
+- **L37**: espera el siguiente mensaje del cliente.
+- **L38–40**: si llegan **bytes vacíos** (`b""`), el cliente cerró la conexión TCP (envió FIN). Entonces se sale del bucle con `break`. Esto es propio de TCP: en UDP no existe "el otro cerró".
 
 ```python
-30         texto = datos.decode(CODIFICACION)
-31         if texto.strip().lower() == CMD_SALIR:
-32             print(f"[TCP] {direccion} pidió salir.")
-33             break
+42         texto = datos.decode(CODIFICACION)
+43         if texto.strip().lower() == CMD_SALIR:
+44             print(f"[TCP] {direccion} pidió salir.")
+45             break
 ```
-- **L30**: bytes → texto.
-- **L31–33**: si el cliente escribió `salir`, sin importar mayúsculas ni espacios, se termina la atención.
+- **L42**: bytes → texto.
+- **L43–45**: si el cliente escribió `salir`, sin importar mayúsculas ni espacios, se termina la atención.
 
 ```python
-35         respuesta = formato_frase(texto)
-36         print(f"[TCP] {direccion} recibido: {texto!r} -> enviado: {respuesta!r}")
-37         conexion.sendall(respuesta.encode(CODIFICACION))
+47         respuesta = formato_frase(texto)
+48         print(f"[TCP] {direccion} recibido: {texto!r} -> enviado: {respuesta!r}")
+49         conexion.sendall(respuesta.encode(CODIFICACION))
 ```
-- **L35**: aplica la transformación: `"hola mundo"` → `"Hola Mundo"`.
-- **L36**: muestra lo recibido y lo enviado. `!r` muestra el texto entre comillas, así se ven los espacios.
-- **L37**: devuelve la respuesta al cliente, convertida a bytes.
+- **L47**: aplica la transformación: `"hola mundo"` → `"Hola Mundo"`.
+- **L48**: muestra lo recibido y lo enviado. `!r` muestra el texto entre comillas, así se ven los espacios.
+- **L49**: devuelve la respuesta al cliente, convertida a bytes.
 
-### Función `main` (L40–63): preparar el servidor y aceptar clientes
-
-```python
-42     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-```
-- **L42**: crea el socket: IPv4 (`AF_INET`) + TCP (`SOCK_STREAM`).
+### Función `main` (L52–80): preparar el servidor y aceptar clientes
 
 ```python
-43     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+54     servidor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 ```
-- **L43**: opción `SO_REUSEADDR`: permite volver a abrir el servidor en el mismo puerto apenas se cierra. Sin esto, a veces el sistema operativo mantiene el puerto ocupado unos segundos y da el error "Address already in use".
+- **L54**: crea el socket: IPv4 (`AF_INET`) + TCP (`SOCK_STREAM`).
 
 ```python
-45     servidor.bind((HOST_ESCUCHA, PUERTO_TCP))  # asocia el socket a IP:puerto
+55     servidor.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 ```
-- **L45**: **`bind()`** asocia el socket a la IP `0.0.0.0` y al puerto `5000`. A partir de acá, el sistema operativo sabe que lo que llegue al puerto 5000 es para este programa. Recibe **una tupla** `(ip, puerto)`, por eso lleva doble paréntesis.
+- **L55**: opción `SO_REUSEADDR`: permite volver a abrir el servidor en el mismo puerto apenas se cierra. Sin esto, a veces el sistema operativo mantiene el puerto ocupado unos segundos y da el error "Address already in use".
 
 ```python
-46     servidor.listen(5)                         # lo pone en modo escucha (cola de 5)
+57     servidor.bind((HOST_ESCUCHA, PUERTO_TCP))  # asocia el socket a IP:puerto
 ```
-- **L46**: **`listen(5)`** convierte el socket en un socket **pasivo** que acepta conexiones entrantes. El `5` es el tamaño de la **cola**: cuántos clientes pueden quedar esperando mientras el servidor atiende a otro.
+- **L57**: **`bind()`** asocia el socket a la IP `0.0.0.0` y al puerto `5000`. A partir de acá, el sistema operativo sabe que lo que llegue al puerto 5000 es para este programa. Recibe **una tupla** `(ip, puerto)`, por eso lleva doble paréntesis.
 
 ```python
-47     print(f"[TCP] Servidor escuchando en el puerto {PUERTO_TCP}... (Ctrl+C para terminar)")
+58     servidor.listen(5)                         # lo pone en modo escucha (cola de 5)
 ```
-- **L47**: mensaje informativo.
+- **L58**: **`listen(5)`** convierte el socket en un socket **pasivo** que acepta conexiones entrantes. El `5` es el tamaño de la **cola**: cuántos clientes pueden quedar esperando mientras el servidor atiende a otro.
 
 ```python
-49     try:
-50         while True:
-53             conexion, direccion = servidor.accept()
-54             print(f"[TCP] Conexión aceptada desde {direccion}")
+59     servidor.settimeout(INTERVALO)             # para que Ctrl+C funcione en Windows
 ```
-- **L49**: `try` para poder capturar `Ctrl+C` (L60) y cerrar ordenadamente.
-- **L50**: el servidor atiende clientes indefinidamente, uno detrás de otro.
-- **L53**: **`accept()`** se **bloquea** hasta que un cliente completa el **handshake de 3 vías** (SYN, SYN+ACK, ACK). Devuelve dos cosas:
+- **L59**: `accept()` no se quedará esperando más de 1 segundo seguido (ver L66–69). Así el servidor se puede detener con `Ctrl+C` en Windows. **No cambia nada de TCP**: es solo cuánto tiempo espera el programa.
+
+```python
+60     print(f"[TCP] Servidor escuchando en el puerto {PUERTO_TCP}... (Ctrl+C para terminar)")
+```
+- **L60**: mensaje informativo.
+
+```python
+62     try:
+63         while True:
+66             try:
+67                 conexion, direccion = servidor.accept()
+68             except socket.timeout:
+69                 continue  # ningún cliente en 1 s: se vuelve a esperar
+70             conexion.settimeout(INTERVALO)
+71             print(f"[TCP] Conexión aceptada desde {direccion}")
+```
+- **L62**: `try` para poder capturar `Ctrl+C` (L77) y cerrar ordenadamente.
+- **L63**: el servidor atiende clientes indefinidamente, uno detrás de otro.
+- **L67**: **`accept()`** espera hasta que un cliente completa el **handshake de 3 vías** (SYN, SYN+ACK, ACK). Devuelve dos cosas:
   - `conexion`: un **socket nuevo**, dedicado solo a ese cliente;
   - `direccion`: la IP y el puerto del cliente.
 
   El socket `servidor` original sigue escuchando.
-- **L54**: registra la conexión.
+- **L68–69**: si en 1 segundo no llegó ningún cliente, `accept()` lanza `socket.timeout`. Se vuelve a esperar. En ese instante es cuando Python puede atender un `Ctrl+C`.
+- **L70**: el socket del cliente también recibe el timeout de 1 s, para que `recibir()` (L14) se pueda interrumpir.
+- **L71**: registra la conexión.
 
 ```python
-55             with conexion:
-56                 try:
-57                     atender_cliente(conexion, direccion)
-58                 except ConnectionError as e:
-59                     print(f"[TCP] Se perdió la conexión con {direccion}: {e}")
+72             with conexion:
+73                 try:
+74                     atender_cliente(conexion, direccion)
+75                 except ConnectionError as e:
+76                     print(f"[TCP] Se perdió la conexión con {direccion}: {e}")
 ```
-- **L55**: `with` garantiza que `conexion.close()` se ejecute al terminar, aunque haya errores. Ese cierre envía el FIN de TCP.
-- **L57**: atiende al cliente.
-- **L58–59**: si el cliente se desconecta de golpe (por ejemplo, cierra la ventana), se produce un `ConnectionError`. Se informa y el servidor **sigue funcionando** para el próximo cliente.
+- **L72**: `with` garantiza que `conexion.close()` se ejecute al terminar, aunque haya errores. Ese cierre envía el FIN de TCP.
+- **L74**: atiende al cliente.
+- **L75–76**: si el cliente se desconecta de golpe (por ejemplo, cierra la ventana), se produce un `ConnectionError`. Se informa y el servidor **sigue funcionando** para el próximo cliente.
 
 ```python
-60     except KeyboardInterrupt:
-61         print("\n[TCP] Servidor detenido.")
-62     finally:
-63         servidor.close()
+77     except KeyboardInterrupt:
+78         print("\n[TCP] Servidor detenido.")
+79     finally:
+80         servidor.close()
 ```
-- **L60–61**: `Ctrl+C` genera `KeyboardInterrupt`. Se captura para mostrar un mensaje en vez de un error feo.
-- **L62–63**: `finally` se ejecuta siempre: libera el puerto 5000.
+- **L77–78**: `Ctrl+C` genera `KeyboardInterrupt`. Se captura para mostrar un mensaje en vez de un error feo.
+- **L79–80**: `finally` se ejecuta siempre: libera el puerto 5000.
 
 ```python
-66 if __name__ == "__main__":
-67     main()
+83 if __name__ == "__main__":
+84     main()
 ```
-- **L66–67**: ejecuta `main()` solo si el archivo se ejecuta directamente (`py servidor_tcp.py`) y no si se importa desde otro archivo. Es una convención de Python.
+- **L83–84**: ejecuta `main()` solo si el archivo se ejecuta directamente (`py servidor_tcp.py`) y no si se importa desde otro archivo. Es una convención de Python.
 
 > **Importante para explicar:** como `atender_cliente()` se ejecuta dentro del mismo bucle que `accept()`, el servidor TCP **atiende a un cliente por vez**. Si otro cliente se conecta mientras tanto, queda esperando en la cola de `listen(5)`.
 
@@ -358,84 +395,98 @@ Contiene lo que comparten los 4 programas. Si se quiere cambiar la clave o un pu
 ## 4. `servidor_udp.py`
 
 ```python
-16     servidor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+13 # Cada cuántos segundos "despierta" recvfrom() para poder atender Ctrl+C
+14 INTERVALO = 1
 ```
-- **L16**: crea un socket **UDP** (`SOCK_DGRAM`).
+- **L14**: igual que en el servidor TCP: tiempo máximo que `recvfrom()` espera de corrido, para que `Ctrl+C` funcione en Windows.
 
 ```python
-17     servidor.bind((HOST_ESCUCHA, PUERTO_UDP))  # en UDP no hay listen() ni accept()
+19     servidor = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 ```
-- **L17**: **`bind()`** al puerto 5001, igual que en TCP. La diferencia: **no hay `listen()` ni `accept()`**, porque en UDP **no existen las conexiones**. El servidor directamente queda listo para recibir datagramas de cualquiera.
+- **L19**: crea un socket **UDP** (`SOCK_DGRAM`).
 
 ```python
-20     autenticados = set()  # direcciones (ip, puerto) que ya enviaron la clave
+20     servidor.bind((HOST_ESCUCHA, PUERTO_UDP))  # en UDP no hay listen() ni accept()
+21     servidor.settimeout(INTERVALO)             # para que Ctrl+C funcione en Windows
 ```
-- **L20**: un **conjunto** (`set`) vacío donde se guardan las direcciones de los clientes que ya pusieron la clave correcta.
+- **L20**: **`bind()`** al puerto 5001, igual que en TCP. La diferencia: **no hay `listen()` ni `accept()`**, porque en UDP **no existen las conexiones**. El servidor directamente queda listo para recibir datagramas de cualquiera.
+- **L21**: `recvfrom()` no esperará más de 1 segundo seguido (ver L31–32).
+
+```python
+24     autenticados = set()  # direcciones (ip, puerto) que ya enviaron la clave
+```
+- **L24**: un **conjunto** (`set`) vacío donde se guardan las direcciones de los clientes que ya pusieron la clave correcta.
   - **¿Por qué hace falta?** En TCP, cada cliente tiene su propio socket de conexión, así que "el que pasó la clave" es ese socket.
   - En UDP todos los mensajes llegan **al mismo socket**, mezclados. La única forma de saber quién es quién es mirar la dirección `(ip, puerto)` de origen de cada datagrama.
 
 ```python
-22     try:
-23         while True:
-24             try:
-26                 datos, direccion = servidor.recvfrom(TAM_BUFFER)
+26     try:
+27         while True:
+28             try:
+30                 datos, direccion = servidor.recvfrom(TAM_BUFFER)
 ```
-- **L26**: **`recvfrom()`** espera un datagrama y devuelve **dos cosas**:
+- **L30**: **`recvfrom()`** espera un datagrama y devuelve **dos cosas**:
   - los datos;
   - la **dirección de quien lo mandó**.
 
   Esa dirección es la que se usa para responder. Es la gran diferencia con `recv()`.
 
 ```python
-27             except ConnectionResetError:
-30                 continue
+31             except socket.timeout:
+32                 continue  # no llegó nada en 1 s: se vuelve a esperar
 ```
-- **L27–30**: particularidad de **Windows**. Si el servidor le respondió a un cliente que ya cerró, llega un mensaje ICMP "port unreachable". Windows lo informa como error en el siguiente `recvfrom()`. Se ignora y se sigue escuchando; si no, el servidor se cerraría.
+- **L31–32**: si en 1 segundo no llegó ningún datagrama, se vuelve a esperar. En ese momento Python puede atender un `Ctrl+C`.
 
 ```python
-32             texto = datos.decode(CODIFICACION).strip()
+33             except ConnectionResetError:
+36                 continue
 ```
-- **L32**: bytes → texto, sin espacios en los extremos.
+- **L33–36**: particularidad de **Windows**. Si el servidor le respondió a un cliente que ya cerró, llega un mensaje ICMP "port unreachable". Windows lo informa como error en el siguiente `recvfrom()`. Se ignora y se sigue escuchando; si no, el servidor se cerraría.
 
 ```python
-34             if direccion not in autenticados:
-36                 if texto == CLAVE:
-37                     autenticados.add(direccion)
-38                     print(f"[UDP] {direccion} -> clave correcta.")
-39                     servidor.sendto(RESP_OK.encode(CODIFICACION), direccion)
-40                 else:
-41                     print(f"[UDP] {direccion} -> clave incorrecta. No se procesa.")
-42                     servidor.sendto(RESP_ERROR.encode(CODIFICACION), direccion)
-43                 continue
+38             texto = datos.decode(CODIFICACION).strip()
 ```
-- **L34**: si esta dirección **todavía no está autenticada**, el datagrama se interpreta como un intento de clave.
-- **L36–39**: clave correcta. Se agrega la dirección al conjunto y se responde `OK` con **`sendto()`**, indicando a quién.
-- **L40–42**: clave incorrecta. Se responde `ERROR` y **no se procesa** el texto.
-- **L43**: `continue` vuelve a esperar el próximo datagrama.
+- **L38**: bytes → texto, sin espacios en los extremos.
 
 ```python
-45             if texto.lower() == CMD_SALIR:
-46                 autenticados.discard(direccion)
-47                 print(f"[UDP] {direccion} pidió salir.")
-48                 continue
+40             if direccion not in autenticados:
+42                 if texto == CLAVE:
+43                     autenticados.add(direccion)
+44                     print(f"[UDP] {direccion} -> clave correcta.")
+45                     servidor.sendto(RESP_OK.encode(CODIFICACION), direccion)
+46                 else:
+47                     print(f"[UDP] {direccion} -> clave incorrecta. No se procesa.")
+48                     servidor.sendto(RESP_ERROR.encode(CODIFICACION), direccion)
+49                 continue
 ```
-- **L45–48**: si un cliente autenticado manda `salir`, se lo borra del conjunto. Si vuelve a escribir, tendrá que poner la clave otra vez.
+- **L40**: si esta dirección **todavía no está autenticada**, el datagrama se interpreta como un intento de clave.
+- **L42–45**: clave correcta. Se agrega la dirección al conjunto y se responde `OK` con **`sendto()`**, indicando a quién.
+- **L46–48**: clave incorrecta. Se responde `ERROR` y **no se procesa** el texto.
+- **L49**: `continue` vuelve a esperar el próximo datagrama.
 
 ```python
-50             respuesta = formato_frase(texto)
-51             print(f"[UDP] {direccion} recibido: {texto!r} -> enviado: {respuesta!r}")
-53             servidor.sendto(respuesta.encode(CODIFICACION), direccion)
+51             if texto.lower() == CMD_SALIR:
+52                 autenticados.discard(direccion)
+53                 print(f"[UDP] {direccion} pidió salir.")
+54                 continue
 ```
-- **L50**: transforma el texto.
-- **L53**: lo devuelve con **`sendto()`**: en UDP **cada envío lleva la dirección de destino**, porque el socket no está conectado a nadie.
+- **L51–54**: si un cliente autenticado manda `salir`, se lo borra del conjunto. Si vuelve a escribir, tendrá que poner la clave otra vez.
 
 ```python
-54     except KeyboardInterrupt:
-55         print("\n[UDP] Servidor detenido.")
-56     finally:
-57         servidor.close()
+56             respuesta = formato_frase(texto)
+57             print(f"[UDP] {direccion} recibido: {texto!r} -> enviado: {respuesta!r}")
+59             servidor.sendto(respuesta.encode(CODIFICACION), direccion)
 ```
-- **L54–57**: igual que en TCP: `Ctrl+C` detiene el servidor y se libera el puerto.
+- **L56**: transforma el texto.
+- **L59**: lo devuelve con **`sendto()`**: en UDP **cada envío lleva la dirección de destino**, porque el socket no está conectado a nadie.
+
+```python
+60     except KeyboardInterrupt:
+61         print("\n[UDP] Servidor detenido.")
+62     finally:
+63         servidor.close()
+```
+- **L60–63**: igual que en TCP: `Ctrl+C` detiene el servidor y se libera el puerto.
 
 > **Importante para explicar:** el servidor UDP **atiende a varios clientes a la vez**, porque cada datagrama se procesa por separado y no hay conexiones que lo "ocupen".
 
@@ -564,6 +615,7 @@ Contiene lo que comparten los 4 programas. Si se quiere cambiar la clave o un pu
 
 ## 7. Preguntas que nos pueden hacer
 
+- **¿Para qué está el `settimeout(1)` en los servidores?** Para que `Ctrl+C` funcione en Windows: sin timeout, `accept()`/`recv()`/`recvfrom()` se quedan bloqueados y Windows no le entrega el `Ctrl+C` al programa hasta que llega un dato. No es el mismo timeout que el del cliente UDP: ese detecta que el servidor no responde.
 - **¿Por qué `sendall()` y no `send()`?**
   - `send()` puede enviar solo una parte de los datos y devuelve cuántos bytes mandó.
   - `sendall()` repite el envío hasta mandar todo.
