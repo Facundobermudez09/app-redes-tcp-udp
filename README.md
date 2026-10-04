@@ -30,7 +30,7 @@ Trabajo práctico de **Redes**: dos aplicaciones cliente/servidor en Python, una
 | `comun.py` | Configuración compartida (clave, puertos) y la función `formato_frase()` |
 | `servidor_tcp.py` / `cliente_tcp.py` | Versión **TCP** |
 | `servidor_udp.py` / `cliente_udp.py` | Versión **UDP** |
-| [`respuestas.md`](respuestas.md) | Respuestas a las preguntas teóricas a–g |
+| [`respuestas.md`](respuestas.md) | Respuestas a las preguntas teóricas a–i |
 | [`explicacion_codigo.md`](explicacion_codigo.md) | Explicación del código línea por línea |
 | [`guion_exposicion.md`](guion_exposicion.md) | Guion completo de la exposición (qué decir y qué hacer) |
 | [`guia_packet_tracer.md`](guia_packet_tracer.md) | Cómo armar y demostrar la red en Cisco Packet Tracer |
@@ -233,7 +233,7 @@ En el paso 5, en una sola computadora suele aparecer *"no hay ningún servidor e
 
 ## 9. Más material
 
-- [`respuestas.md`](respuestas.md): preguntas teóricas a–g.
+- [`respuestas.md`](respuestas.md): preguntas teóricas a–i.
 - [`explicacion_codigo.md`](explicacion_codigo.md): explicación del código línea por línea y preguntas que nos pueden hacer.
 - [`guion_exposicion.md`](guion_exposicion.md): guion completo de la exposición.
 - [`guia_packet_tracer.md`](guia_packet_tracer.md): topología, direccionamiento y demostración en modo Simulación.

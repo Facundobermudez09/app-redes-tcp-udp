@@ -77,3 +77,75 @@ En UDP también se puede llamar a `connect()`, pero no hay handshake. Solo fija 
 UDP es más liviano: tiene una cabecera de 8 bytes (TCP tiene 20 como mínimo), no necesita handshake y tiene menor latencia. Por eso conviene en DNS, streaming, VoIP y juegos, donde la velocidad importa más que la entrega perfecta.
 
 Una consecuencia en este TP: con UDP, si se pierde un datagrama, el cliente se queda sin respuesta. Por eso nuestro cliente UDP necesita un **timeout**, mientras que el cliente TCP no.
+
+## h. ¿Por qué TCP se considera orientado a conexión y UDP no?
+
+**TCP es orientado a conexión** porque, antes de intercambiar datos, los dos extremos **establecen una conexión** y mantienen un **estado compartido** mientras dura:
+
+1. **Establecimiento:** el handshake de 3 vías (SYN, SYN+ACK, ACK). En él se acuerdan los números de secuencia iniciales, el tamaño de ventana y opciones como el MSS.
+2. **Mantenimiento del estado:** cada extremo recuerda en qué número de secuencia va, qué datos fueron confirmados (ACK) y cuáles hay que retransmitir. La conexión pasa por estados: `LISTEN`, `SYN-SENT`, `ESTABLISHED`, `FIN-WAIT`, `TIME-WAIT`, etc.
+3. **Cierre ordenado:** se libera con un intercambio de FIN/ACK en cada sentido.
+4. **Identificación:** una conexión se identifica por la cuádrupla **IP origen, puerto origen, IP destino, puerto destino**. Todos los segmentos de esa conexión pertenecen al mismo "canal" lógico, un flujo de bytes punto a punto.
+
+**UDP no es orientado a conexión** porque:
+- no hay handshake ni cierre;
+- el emisor no guarda ningún estado sobre el receptor;
+- cada **datagrama es independiente** y lleva la dirección de destino;
+- el receptor no sabe si vendrán más datagramas ni de quién.
+
+Por eso se dice que UDP ofrece un servicio de *"mejor esfuerzo"*: envía y se olvida.
+
+**Cómo se ve en nuestro código:**
+
+| | TCP | UDP |
+|---|---|---|
+| Establecer | `connect()` en el cliente, `listen()` + `accept()` en el servidor | No existe: directamente `sendto()` |
+| Un socket por cliente | Sí: `accept()` crea uno nuevo para cada conexión | No: un único socket recibe datagramas de todos |
+| Enviar y recibir | `send()` / `recv()`, sin dirección porque el socket ya está "atado" al otro extremo | `sendto()` / `recvfrom()`, con la dirección en cada datagrama |
+| Saber quién puso la clave | Implícito: es esa conexión | Hay que recordarlo a mano: el conjunto `autenticados` con `(ip, puerto)` |
+| Saber que el otro se fue | `recv()` devuelve `b""` (llegó un FIN) | Imposible: solo se nota porque no llegan más datos |
+
+## i. ¿Qué información adicional puede observarse en una captura de Wireshark?
+
+Wireshark captura los paquetes reales que pasan por una interfaz de red y muestra **todas las capas** de cada uno. Además de lo que muestra el programa (el texto enviado y recibido), se puede observar:
+
+**Capa de enlace (Ethernet)**
+- Direcciones **MAC** de origen y destino.
+- Los mensajes **ARP** previos, para averiguar la MAC a partir de la IP.
+
+**Capa de red (IP)**
+- IP de origen y destino.
+- **TTL** (tiempo de vida).
+- Identificación, flags de fragmentación, longitud total y checksum del encabezado.
+
+**Capa de transporte – TCP**
+- **Puertos** de origen y destino. Se ve el **puerto efímero** que el sistema operativo le asignó al cliente.
+- El **handshake de 3 vías** (SYN, SYN+ACK, ACK) y el **cierre** (FIN/ACK), o un **RST** cuando la conexión es rechazada (pregunta e).
+- **Números de secuencia y de ACK**: cómo cada byte enviado es confirmado.
+- **Flags** (SYN, ACK, FIN, RST, PSH).
+- **Tamaño de ventana**, usado para el control de flujo.
+- **Opciones** negociadas en el handshake: MSS, *window scale*, SACK.
+- Análisis automático: **retransmisiones**, ACK duplicados, segmentos fuera de orden y **RTT** (tiempo de ida y vuelta).
+
+**Capa de transporte – UDP**
+- Solo **puertos, longitud y checksum**: se ve lo simple que es el encabezado (8 bytes) comparado con TCP.
+- Cuando el servidor UDP está apagado, el mensaje **ICMP "Destination unreachable (Port unreachable)"** que devuelve el sistema operativo (pregunta f).
+
+**Capa de aplicación (los datos)**
+- El contenido del mensaje: el texto y **la clave `redes2026` en texto plano**. Esto demuestra que nuestra autenticación **no es segura**: cualquiera que capture el tráfico puede leer la clave. Para protegerla habría que cifrar la comunicación, por ejemplo con TLS.
+
+**Tiempos y estadísticas**
+- Marca de tiempo de cada paquete: cuánto tarda el servidor en responder.
+- Cantidad de paquetes y bytes. Por ejemplo, para enviar una sola frase, TCP necesita varios segmentos más (handshake, ACKs, cierre) que UDP.
+- Herramientas como *Follow TCP Stream* (reconstruye toda la conversación) y *Statistics → Flow Graph* (diagrama de la secuencia de paquetes).
+
+**Cómo capturar nuestra aplicación**
+- **En una sola PC (`127.0.0.1`):** el tráfico no pasa por la placa de red. Hay que capturar en la interfaz **"Adapter for loopback traffic capture"**, que se instala con Npcap junto con Wireshark.
+- **Entre dos PCs:** se captura en la interfaz **Wi-Fi** o **Ethernet**.
+- Filtros útiles:
+  - `tcp.port == 5000`: nuestra app TCP.
+  - `udp.port == 5001`: nuestra app UDP.
+  - `tcp.flags.syn == 1`: solo los segmentos del handshake.
+  - `icmp`: para ver el "port unreachable" de UDP.
+
+**Comparación con Packet Tracer:** Packet Tracer **simula** los paquetes y muestra sus campos en *PDU Details*. Wireshark muestra el **tráfico real**, con valores reales: tiempos, números de secuencia, retransmisiones y las opciones que negocia el sistema operativo.

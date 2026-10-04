@@ -195,3 +195,5 @@ Las respuestas están en [`explicacion_codigo.md`](explicacion_codigo.md) (secci
 - ¿La clave viaja segura?
 - ¿Por qué el cliente UDP necesita timeout y el TCP no?
 - ¿Qué hace el router con los segmentos TCP? ¿Mira los puertos?
+- **h.** ¿Por qué TCP es orientado a conexión y UDP no?
+- **i.** ¿Qué más se puede ver en una captura de Wireshark? (Tip: la clave viaja en texto plano y se puede leer en la captura)
