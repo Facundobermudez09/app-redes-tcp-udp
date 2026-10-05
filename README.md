@@ -216,7 +216,7 @@ Los textos viajan como bytes en **UTF-8** (`.encode()` / `.decode()`), así func
 | 3 | Lo mismo con `servidor_udp.py` / `cliente_udp.py` | Preguntas **b**, **d** y **h** (`connect` vs `sendto`, `recv` vs `recvfrom`, orientado a conexión) |
 | 4 | Cerrar el servidor TCP (`Ctrl+C`) y ejecutar el cliente TCP | Pregunta **e**: rechazo inmediato |
 | 5 | Cerrar el servidor UDP y ejecutar el cliente UDP | Pregunta **f**: la clave "se envía" igual; luego error o timeout |
-| 6 | Mostrar la simulación en Packet Tracer | Handshake TCP vs UDP sin conexión; pregunta **g** |
+| 6 | Comparar TCP y UDP | Pregunta **g** |
 | 7 | Mencionar qué mostraría Wireshark (la clave en texto plano) | Pregunta **i** |
 
 En el paso 5, en una sola computadora suele aparecer *"no hay ningún servidor en ese puerto (ICMP port unreachable)"*. Entre dos computadoras suele aparecer *"Sin respuesta después de 3 s"*, porque el firewall descarta el paquete sin avisar. Las dos cosas son correctas y sirven para explicar la pregunta f.

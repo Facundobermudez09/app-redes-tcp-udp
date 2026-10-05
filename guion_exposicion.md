@@ -1,6 +1,6 @@
 # Guion de la exposición – Ejercicio 7
 
-**Duración estimada:** 12–15 minutos más preguntas.
+**Duración estimada:** 10–12 minutos más preguntas.
 
 **Roles:** el guion está dividido en 3 partes. Si son más o menos integrantes, repartan las partes como les quede cómodo.
 
@@ -13,10 +13,9 @@
 | 1 | Introducción y consigna | Integrante 1 | 1–2 min |
 | 2 | El código: estructura y protocolo | Integrante 1 | 2–3 min |
 | 3 | Demo TCP | Integrante 2 | 2–3 min |
-| 4 | Demo UDP y comparación | Integrante 2 | 2–3 min |
-| 5 | Packet Tracer | Integrante 3 | 3–4 min |
-| 6 | Conclusión | Integrante 3 | 1 min |
-| 7 | Preguntas | Todos | — |
+| 4 | Demo UDP y comparación | Integrante 3 | 3–4 min |
+| 5 | Conclusión | Integrante 3 | 1 min |
+| 6 | Preguntas | Todos | — |
 
 ---
 
@@ -30,8 +29,6 @@
 - [ ] Probar que `py --version` funcione en la compu que se va a usar.
 - [ ] Tener la **última versión** del repositorio (volver a bajar el ZIP si lo descargaron antes del 4/10).
 - [ ] **No** dejar servidores abiertos de antes. Si aparece `WinError 10048`, hay uno abierto: cerrarlo con `Ctrl+C`.
-- [ ] Abrir `ejercicio7_tcp_udp.pkt` en Packet Tracer y dejarlo en modo **Realtime**.
-- [ ] Hacer un `ping` desde la PC al servidor en Packet Tracer, para que ARP ya esté resuelto y la simulación sea más limpia.
 - [ ] Tener abierto un editor con `servidor_tcp.py` y `servidor_udp.py` por si piden ver el código.
 - [ ] Agrandar la letra de las terminales (`Ctrl` + rueda del mouse) para que se lea desde lejos.
 
@@ -109,7 +106,7 @@
 
 ---
 
-## 4. Demo UDP y comparación (Integrante 2)
+## 4. Demo UDP y comparación (Integrante 3)
 
 🖱️ Terminal del servidor UDP: `py servidor_udp.py`. Terminal del cliente UDP: `py cliente_udp.py`, clave correcta, un texto, `salir`.
 
@@ -130,46 +127,12 @@
 🗣️ (cierre de la comparación, **pregunta g**)
 > "Resumiendo: TCP establece una conexión, confirma cada segmento con ACK, retransmite lo que se pierde, entrega en orden y tiene control de flujo y de congestión. UDP no tiene nada de eso: es más liviano y rápido, pero la aplicación tiene que encargarse de los problemas. Nuestro propio código lo muestra: el cliente TCP no necesita timeout, y el UDP sí."
 
----
-
-## 5. Packet Tracer (Integrante 3)
-
-🗣️
-> "Packet Tracer no puede ejecutar el módulo `socket` estándar de Python. Por eso usamos Packet Tracer para mostrar **qué pasa en la red** con los mismos protocolos de transporte. Usamos dos servicios que funcionan igual que nuestra aplicación: **HTTP, que va sobre TCP, y DNS, que va sobre UDP**."
-
-🖱️ Mostrar la topología.
-
-🗣️
-> "La red tiene una PC cliente y un servidor que da servicio **web y DNS**. Están en **dos redes distintas**, cada una con su switch, unidas por un **router**. Así se ve que los segmentos TCP y los datagramas UDP atraviesan el router. El router trabaja en la capa de red, con IP; los puertos y el handshake solo les importan a los extremos."
-
-🖱️ Pasar a **Simulation**. En **Edit Filters** dejar solo DNS, HTTP, TCP y UDP. En la PC: **Desktop → Web Browser** → escribir el nombre DNS del servidor → **Go**. Avanzar con **Capture/Forward**.
-
-🗣️ (mientras avanza)
-> "Primero sale la **consulta DNS**: un solo datagrama UDP, sin ningún aviso previo, que va de la PC al servidor pasando por el router. Vuelve la respuesta con la IP. Eso es UDP: mensaje y respuesta, nada más.
->
-> Ahora la PC ya sabe la IP y abre la conexión TCP con el servidor web: vemos el **SYN**, el **SYN+ACK** y el **ACK**. Ese es el **handshake de tres vías**, lo mismo que hace nuestro `connect`. Recién después viaja el pedido HTTP con la página."
-
-🖱️ Hacer clic en el sobre de un segmento TCP y abrir **PDU Details**.
-
-🗣️
-> "Si abrimos un segmento TCP, vemos los puertos de origen y destino, el **número de secuencia**, el **número de ACK**, los **flags** como SYN o ACK, y la **ventana**, que se usa para el control de flujo."
-
-🖱️ Abrir el detalle de un datagrama UDP (DNS).
-
-🗣️
-> "En cambio, el datagrama UDP solo tiene puertos, longitud y checksum. **No tiene secuencia, ni ACK, ni ventana**: por eso UDP no puede garantizar la entrega ni el orden."
-
 🗣️ (**pregunta i**)
-> "Esto en Packet Tracer es una simulación. Con **Wireshark** se puede capturar el tráfico real de nuestro programa —filtrando por `tcp.port == 5000` o `udp.port == 5001`— y ahí se ve además: las direcciones MAC e IP, el puerto efímero del cliente, el handshake, los números de secuencia y ACK, las retransmisiones y el ICMP cuando el servidor UDP está apagado. Y algo importante: **se lee la clave en texto plano**, lo que demuestra que nuestra autenticación no es segura sin cifrado."
-
-🖱️ Opcional: en el servidor, **Services → HTTP → Off** y repetir. Después **DNS → Off** y repetir.
-
-🗣️ (opcional)
-> "Si apagamos el servicio web, la conexión TCP no se puede establecer. Si apagamos el DNS, la consulta UDP sale igual pero nunca recibe respuesta, y el navegador no puede resolver el nombre. Es el mismo comportamiento que mostramos con nuestro programa."
+> "Con **Wireshark** se puede capturar el tráfico real de nuestro programa —filtrando por `tcp.port == 5000` o `udp.port == 5001`— y ahí se ve además: las direcciones MAC e IP, el puerto efímero del cliente, el handshake, los números de secuencia y ACK, las retransmisiones y el ICMP cuando el servidor UDP está apagado. Y algo importante: **se lee la clave en texto plano**, lo que demuestra que nuestra autenticación no es segura sin cifrado."
 
 ---
 
-## 6. Conclusión (Integrante 3)
+## 5. Conclusión (Integrante 3)
 
 🗣️
 > "Como conclusión: con la misma aplicación pudimos ver en la práctica la diferencia entre los dos protocolos de transporte. Con **TCP**, la API nos obliga a establecer una conexión con `bind`, `listen`, `accept` y `connect`, y a cambio obtenemos confiabilidad: si el servidor no está, lo sabemos al instante. Con **UDP** solo usamos `bind`, `sendto` y `recvfrom`; es más simple y rápido, pero la aplicación tiene que resolver la autenticación por dirección y los timeouts.
@@ -178,7 +141,7 @@
 
 ---
 
-## 7. Plan B si algo falla en vivo
+## 6. Plan B si algo falla en vivo
 
 | Problema | Qué hacer |
 |---|---|
@@ -186,10 +149,9 @@
 | `Ctrl+C` no cierra el servidor | Es la versión vieja del código: cerrar la terminal con la X y bajar la última versión del repo |
 | `'py' no se reconoce` | Probar con `python`; si no, usar la notebook de otro integrante |
 | La demo entre dos PCs no conecta | Hacerla en una sola PC con `127.0.0.1`: se explica igual |
-| Packet Tracer no muestra el handshake | Hacer **Reset Simulation**, revisar los filtros (TCP activado) y repetir |
 | Nervios / se olvidaron qué decir | Tener este guion abierto en el celular; las respuestas están en `respuestas.md` |
 
-## 8. Preguntas probables
+## 7. Preguntas probables
 
 Las respuestas están en [`explicacion_codigo.md`](explicacion_codigo.md) (sección 7) y en [`respuestas.md`](respuestas.md).
 
@@ -202,6 +164,5 @@ Las respuestas están en [`explicacion_codigo.md`](explicacion_codigo.md) (secci
 - ¿La clave viaja segura?
 - ¿Por qué el cliente UDP necesita timeout y el TCP no?
 - ¿Para qué está el `settimeout(1)` en los servidores? (para que `Ctrl+C` funcione en Windows; no tiene que ver con TCP/UDP)
-- ¿Qué hace el router con los segmentos TCP? ¿Mira los puertos?
 - **h.** ¿Por qué TCP es orientado a conexión y UDP no?
 - **i.** ¿Qué más se puede ver en una captura de Wireshark? (Tip: la clave viaja en texto plano y se puede leer en la captura)
